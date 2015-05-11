@@ -15,16 +15,19 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class NodeScalaSuite extends FunSuite {
 
+  // always
   test("The Future should be completed with the value passed in to \"always\" method. [Int]") {
     val always = Future.always(517)
     assert(Await.result(always, 0 nanos) == 517)
   }
   
+  // always
   test("The Future should be completed with the value passed in to \"always\" method. [String]") {
       val always = Future.always("foo")
       assert(Await.result(always, 0 nanos) == "foo")
   }
   
+  // never
   test("The Future should never be completed. [Int]") {
     val never = Future.never[Int]
 
@@ -36,12 +39,12 @@ class NodeScalaSuite extends FunSuite {
     } catch {
       case t: TimeoutException => {
           // ok! 
-          //println("~~In test \"never\" catch.")
       }
     }
   }
   
-  test("Return the future holding the value of the future that completed first. test 1") {
+  // any
+  test("Future should return the future holding the value of the future that completed first. test 1") {
       val one = Future {
         Thread.sleep(100)
         1
@@ -57,7 +60,8 @@ class NodeScalaSuite extends FunSuite {
       assert(Await.result(any, 1 second) == 2)
   }
   
-  test("Return the future holding the value of the future that completed first. test 2") {
+  // any
+  test("Future should return the future holding the value of the future that completed first. test 2") {
       val one = Future {
         1
       }                                                 
@@ -73,7 +77,8 @@ class NodeScalaSuite extends FunSuite {
       assert(Await.result(any, 1 second) == 1)
   }
   
-  test("Return the future holding the value of the future that completed first. test 3") {
+  // any
+  test("Future should return the future holding the value of the future that completed first. test 3") {
       val one = Future {
         Thread.sleep(200)
         1
@@ -91,7 +96,47 @@ class NodeScalaSuite extends FunSuite {
       } catch {
           case e: Exception => {
               // ok!
-              println("~~In \"any\" test 3 catch. ok.")
+          }
+      }
+  }
+  
+  // all
+  test("The Future should take a List of Futures and return a Future of the List values. test 1") {
+      val one = Future {
+        Thread.sleep(100)
+        1
+      }                                                 
+      val two = Future {
+        2
+      }
+      val three = Future {
+        Thread.sleep(200)
+        3
+      }
+      val all = Future.all(List(three, two, one))
+      assert(Await.result(all, 1 second) == List(3,2,1))
+  }
+  
+  // all
+  test("The Future should take a List of Futures and fail on exception. test 2") {
+      val one = Future {
+        Thread.sleep(100)
+        1
+      }                                                 
+      val two = Future {
+        2
+      }
+      val three = Future {
+        Thread.sleep(200)
+        throw new Exception
+      }
+      try{
+          val all = Future.all(List(one, two, three))
+          Await.result(all, 1 second)
+          assert(false)
+      } catch {
+          case e: Exception => {
+              // ok!
           }
       }
   }

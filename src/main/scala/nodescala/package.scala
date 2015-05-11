@@ -41,7 +41,6 @@ package object nodescala {
      */
     def all[T](fs: List[Future[T]]): Future[List[T]] = {
       // hint - see the lectures
-      //???
       fs match {
           case Nil => Future(Nil)
           case ft :: fts => {
