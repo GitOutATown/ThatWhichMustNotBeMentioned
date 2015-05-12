@@ -86,9 +86,11 @@ package object nodescala {
       }
     }
 
-    /** Creates a cancellable context for an execution and runs it.
+    /** Creates a cancellable context for an execution and runs it.  
      */
-    def run()(f: CancellationToken => Future[Unit]): Subscription = ???
+    def run()(f: CancellationToken => Future[Unit]): Subscription = {
+        CancellationTokenSource()
+    }
   } // end FutureCompanionOps
 
   /** Adds extension methods to future objects.
@@ -155,6 +157,9 @@ package object nodescala {
     /** Given two subscriptions `s1` and `s2` returns a new composite subscription
      *  such that when the new composite subscription cancels both `s1` and `s2`
      *  when `unsubscribe` is called.
+     *  
+     *  This is not the only Subscription constructor. The CancellationTokenSource
+     *  object also constructs its companion object 
      */
     def apply(s1: Subscription, s2: Subscription) = new Subscription {
       def unsubscribe() {
@@ -184,7 +189,26 @@ package object nodescala {
   /** Creates cancellation token sources.
    */
   object CancellationTokenSource {
-    /** Creates a new `CancellationTokenSource`.
+    /**  Creates a new `CancellationTokenSource`.
+       * This apply block is a constructor for CancellationTokenSource which extends Subcription
+       * which provides the unsubscribe method.
+       * 
+       * I'm betting that a new CancellationTokenSource should be created and used in the run 
+       * method which must return a Subscription for the purpose of unsubscribing from a Future
+       * (i.e. long-running assynchronous computation).
+       * 
+       * This constructor creates a Promise p which provides cancellization state for the token.
+       * When the Promise p is completed by an invocation of the unsubcribe method, subsequent
+       * queries to cancellationToken.isCancelled return true.
+       * 
+       * This constructor also invokes the construction of a member CancellationToken (from its
+       * corresponding trait) which in turn provides a concrete implementation/definition for
+       * its own isCancelled method.
+       * 
+       * isCancelled checks to see if Promise p has been completed (by a call to unsubscribe). 
+       * 
+       * This constructor provides the concrete implementation/definition for the unsubscribe
+       * method. unsubscribe completes the Promise p for 'this' Subscription.
      */
     def apply() = new CancellationTokenSource {
       val p = Promise[Unit]()
@@ -194,7 +218,7 @@ package object nodescala {
       def unsubscribe() {
         p.trySuccess(())
       }
-    }
-  }
+    } // end apply constructor
+  } // CancellationTokenSource
 }
 

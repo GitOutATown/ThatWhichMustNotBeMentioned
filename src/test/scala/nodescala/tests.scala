@@ -242,17 +242,64 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // continue
-  test("continue should wait for the first future to complete") {
+  test("continue should wait for the first future to complete. test 1") {
       val delay = Future.delay(1 second)
-      val always = (f: Try[Unit]) => "42"
-      def huh(t: Try[Int]) = 42
+      val tryFunc = (f: Try[Unit]) => "42"
               
       try {
-        Await.result(delay.continue(always), 500 millis)
+        Await.result(delay.continue(tryFunc), 500 millis)
         assert(false)
       }
       catch {
         case t: TimeoutException => // ok
+      }
+  }
+  
+  // continue
+  test("continue should wait for the first future to complete. test 2") {
+    val delay = Future.delay(1 second) continue { _ => 3 }
+    assert(Await.result(delay, 1.1 seconds) == 3)
+  }
+  
+  // run
+  test("A Future should be cancellable. test 1") {
+      val working = Future.run() { ct =>
+        Future {
+          while (ct.nonCancelled) {
+            println("~~~~working")
+          }
+          assert(ct.isCancelled)
+          println("~~~~done")
+        }
+      }
+      val f = Future.delay(5 seconds)
+      f onSuccess {
+        case _ => working.unsubscribe()
+      }
+      Await.ready(f, 6 seconds)
+  }
+  
+  // run
+  test("A Future should throw exception if unsubscribed before delay duration. test 2") {
+      val working = Future.run() { ct =>
+        Future {
+          while (ct.nonCancelled) {
+            println("~~~~working")
+          }
+          assert(ct.isCancelled)
+          println("~~~~done")
+        }
+      }
+      val f = Future.delay(5 seconds)
+      f onSuccess {
+        case _ => working.unsubscribe()
+      }
+      
+      try{
+          Await.ready(f, 3 seconds)
+          assert(false)
+      } catch {
+          case e: Exception => // ok!
       }
   }
 
