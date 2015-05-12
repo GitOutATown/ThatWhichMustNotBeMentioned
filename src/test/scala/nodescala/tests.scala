@@ -140,6 +140,78 @@ class NodeScalaSuite extends FunSuite {
           }
       }
   }
+  
+  // delay
+  test("A Future should be completed after 1s delay") { 
+    val start = System.currentTimeMillis()  
+
+    Future.delay(1 second) onComplete { case _ =>  
+      val duration = System.currentTimeMillis() - start 
+      assert (duration >= 1000L && duration < 1100L)
+    }
+  }  
+
+  // delay
+  test("Two sequential delays of 1s should delay by 2s") {  
+    val start = System.currentTimeMillis()  
+
+    val combined = for {  
+      f1 <- Future.delay(1 second)  
+      f2 <- Future.delay(1 second)  
+    } yield ()  
+
+    combined onComplete { case _ =>  
+      val duration = System.currentTimeMillis() - start  
+      assert (duration >= 2000L && duration < 2100L)
+    }
+  }
+  
+  // delay
+  test("A Future should complete after 3s when using a delay of 1s") {  
+      val p = Promise[Unit]()  
+    
+      Future {  
+        blocking {  
+          Future.delay(1 second) onSuccess {  
+            case _ => p.complete(Try(()))  
+          }  
+        }  
+      }  
+    
+      Await.ready(p.future, 3 second)  
+  }  
+    
+  // delay  
+  test("A Future should not complete after 1s when using a delay of 3s") {  
+      val p = Promise[Unit]()  
+    
+      Future {  
+        blocking {  
+          Future.delay(3 second) onSuccess {  
+            case _ => p.complete(Try(()))  
+          }  
+        }  
+      }  
+    
+      try {  
+        Await.result(p.future, 1 second)  
+        assert(false)  
+      } catch {  
+        case t: TimeoutException => // ok!  
+      }  
+  }
+  
+  // delay
+  test("A Future should not complete after 2s when using a delay of 5s") {
+    //try {
+      val p = Future.delay(5 second)
+    try {
+      val z = Await.result(p, 2 second) // block for future to complete
+      assert(false)
+    } catch {
+      case _: TimeoutException => // Ok!
+    }
+  }
 
   // ----------------------- //
   
