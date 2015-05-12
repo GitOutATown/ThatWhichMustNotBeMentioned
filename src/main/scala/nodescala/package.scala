@@ -132,7 +132,13 @@ package object nodescala {
      */
     // The different from continueWith is that this is using Try.
     def continue[S](cont: Try[T] => S): Future[S] = {
-      ???
+      val p = Promise[S]() 
+      
+      f onComplete {
+          case tryValue => p.complete(Try(cont(tryValue)))
+      }
+      
+      p.future
     }
 
   } // end FutureOps
