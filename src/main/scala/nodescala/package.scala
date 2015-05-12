@@ -73,6 +73,7 @@ package object nodescala {
     /** Returns a future with a unit value that is completed after time `t`.
      */ 
     def delay(t: Duration): Future[Unit] = {
+      // https://github.com/GitOutATown/async
       async { Thread.sleep(t.toMillis) }
     }
 
@@ -87,7 +88,7 @@ package object nodescala {
     /** Creates a cancellable context for an execution and runs it.
      */
     def run()(f: CancellationToken => Future[Unit]): Subscription = ???
-  }
+  } // end FutureCompanionOps
 
   /** Adds extension methods to future objects.
    */
@@ -114,28 +115,13 @@ package object nodescala {
      *  The resulting future contains a value returned by `cont`.
      */
     def continueWith[S](cont: Future[T] => S): Future[S] = {
-      /*
-          file onComplete {
-              case Success(text) => what
-              case Failure(t) => ever
-          }
-       */
-      /*
-       * Also, what about for comp?
-          val netiquette = Future { Source.fromURL("http://www.ietf.org/rfc/rfc1855.txt").mkString }
-            val urlSpec = Future { Source.fromURL("http://www.w3.org/Addressing/URL/url-spec.txt").mkString }
-            val answer = for {
-              nettext <- netiquette
-              urltext <- urlSpec
-            } yield {
-              "First of all, read this: " + nettext + " Once you're done, try this: " + urltext
-            }
-       */
-      /*
-       * Higher-order Functions to manipulate Try[T]
-            def flatMap[S](f: T=>Try[S]): Try[S] // Arrghh! This is the reverse of the needed 'cont' param structure!
-       */
-      ???
+        val p = Promise[S]()
+        
+        f onComplete {
+            case tryValue => p.complete(Try(cont(f)))
+        }
+        
+        p.future
     }
 
     /** Continues the computation of this future by taking the result
@@ -149,7 +135,7 @@ package object nodescala {
       ???
     }
 
-  }
+  } // end FutureOps
 
   /** Subscription objects are used to be able to unsubscribe
    *  from some event source.

@@ -16,19 +16,19 @@ import org.scalatest.junit.JUnitRunner
 class NodeScalaSuite extends FunSuite {
 
   // always
-  test("The Future should be completed with the value passed in to \"always\" method. [Int]") {
+  test("A Future should be completed with the value passed in to \"always\" method. [Int]") {
     val always = Future.always(517)
     assert(Await.result(always, 0 nanos) == 517)
   }
   
   // always
-  test("The Future should be completed with the value passed in to \"always\" method. [String]") {
+  test("A Future should be completed with the value passed in to \"always\" method. [String]") {
       val always = Future.always("foo")
       assert(Await.result(always, 0 nanos) == "foo")
   }
   
   // never
-  test("The Future should never be completed. [Int]") {
+  test("A Future should never be completed. [Int]") {
     val never = Future.never[Int]
 
     try {
@@ -44,7 +44,7 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // any
-  test("Future should return the future holding the value of the future that completed first. test 1") {
+  test("A Future should return the future holding the value of the future that completed first. test 1") {
       val one = Future {
         Thread.sleep(100)
         1
@@ -61,7 +61,7 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // any
-  test("Future should return the future holding the value of the future that completed first. test 2") {
+  test("A Future should return the future holding the value of the future that completed first. test 2") {
       val one = Future {
         1
       }                                                 
@@ -78,7 +78,7 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // any
-  test("Future should return the future holding the value of the future that completed first. test 3") {
+  test("A Future should return the future holding the value of the future that completed first. test 3") {
       val one = Future {
         Thread.sleep(200)
         1
@@ -101,7 +101,7 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // all
-  test("The Future should take a List of Futures and return a Future of the List values. test 1") {
+  test("A Future should take a List of Futures and return a Future of the List values. test 1") {
       val one = Future {
         Thread.sleep(100)
         1
@@ -118,7 +118,7 @@ class NodeScalaSuite extends FunSuite {
   }
   
   // all
-  test("The Future should take a List of Futures and fail on exception. test 2") {
+  test("A Future should take a List of Futures and fail on exception. test 2") {
       val one = Future {
         Thread.sleep(100)
         1
@@ -203,8 +203,7 @@ class NodeScalaSuite extends FunSuite {
   
   // delay
   test("A Future should not complete after 2s when using a delay of 5s") {
-    //try {
-      val p = Future.delay(5 second)
+    val p = Future.delay(5 second)
     try {
       val z = Await.result(p, 2 second) // block for future to complete
       assert(false)
@@ -212,6 +211,35 @@ class NodeScalaSuite extends FunSuite {
       case _: TimeoutException => // Ok!
     }
   }
+  
+  // now
+  test("A Future should return its result if it is completed now") {
+      val p = Promise[Unit]()
+      p.success(())
+      p.future.now
+      assert(true)
+  }
+  
+  // now
+  test("*never.now* should throw a NoSuchElementException") {
+    intercept[NoSuchElementException] {
+      Future.never.now
+    }
+  }
+  
+  // continueWith
+  test("continueWith should wait for the first future to complete") {
+      val delay = Future.delay(1 second)
+      val always = (f: Future[Unit]) => 42
+    
+      try {
+        Await.result(delay.continueWith(always), 500 millis)
+        assert(false)
+      }
+      catch {
+        case t: TimeoutException => // ok
+      }
+   }
 
   // ----------------------- //
   
