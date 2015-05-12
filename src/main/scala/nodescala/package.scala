@@ -74,7 +74,8 @@ package object nodescala {
      */ 
     def delay(t: Duration): Future[Unit] = {
       // https://github.com/GitOutATown/async
-      async { Thread.sleep(t.toMillis) }
+      val futUnit = async { Thread.sleep(t.toMillis) }
+      futUnit
     }
 
     /** Completes this future with user input.
@@ -118,7 +119,7 @@ package object nodescala {
         val p = Promise[S]()
         
         f onComplete {
-            case tryValue => p.complete(Try(cont(f)))
+            case _ => p.complete(Try(cont(f)))
         }
         
         p.future

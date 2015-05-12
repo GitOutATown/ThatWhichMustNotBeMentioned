@@ -230,7 +230,7 @@ class NodeScalaSuite extends FunSuite {
   // continueWith
   test("continueWith should wait for the first future to complete") {
       val delay = Future.delay(1 second)
-      val always = (f: Future[Unit]) => 42
+      val always = (f: Future[Unit]) => "42"
     
       try {
         Await.result(delay.continueWith(always), 500 millis)
@@ -239,7 +239,22 @@ class NodeScalaSuite extends FunSuite {
       catch {
         case t: TimeoutException => // ok
       }
-   }
+  }
+  
+  // continue
+  test("continue should wait for the first future to complete") {
+      val delay = Future.delay(1 second)
+      val always = (f: Try[Unit]) => "42"
+      def huh(t: Try[Int]) = 42
+              
+      try {
+        Await.result(delay.continue(always), 500 millis)
+        assert(false)
+      }
+      catch {
+        case t: TimeoutException => // ok
+      }
+  }
 
   // ----------------------- //
   
