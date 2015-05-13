@@ -86,10 +86,17 @@ package object nodescala {
       }
     }
 
-    /** Creates a cancellable context for an execution and runs it.  
+    /** Creates a cancellable context for an execution and runs it.
+     *  
+     *  f defines a function. The function takes a single argument,
+     *  which is a CancelationToken.
      */
     def run()(f: CancellationToken => Future[Unit]): Subscription = {
-        CancellationTokenSource()
+        //println("~~~~ run TOP, f: " + f)
+        val cts = CancellationTokenSource()
+        val ct = cts.cancellationToken
+        f(ct)
+        cts
     }
   } // end FutureCompanionOps
 

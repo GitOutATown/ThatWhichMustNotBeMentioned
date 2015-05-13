@@ -263,44 +263,28 @@ class NodeScalaSuite extends FunSuite {
   
   // run
   test("A Future should be cancellable. test 1") {
+      /*
+       * working is a Subscription, ct is the cancellationToken.
+       * It is a mystery as to how ct is instantiated!
+       */
       val working = Future.run() { ct =>
+        println("~~~~ ct: " + ct)
         Future {
           while (ct.nonCancelled) {
-            println("~~~~working")
+            //println("....working")
           }
           assert(ct.isCancelled)
-          println("~~~~done")
+          println("....done")
         }
-      }
+      } // end working = Future.run()
+      
       val f = Future.delay(5 seconds)
-      f onSuccess {
-        case _ => working.unsubscribe()
-      }
-      Await.ready(f, 6 seconds)
-  }
-  
-  // run
-  test("A Future should throw exception if unsubscribed before delay duration. test 2") {
-      val working = Future.run() { ct =>
-        Future {
-          while (ct.nonCancelled) {
-            println("~~~~working")
-          }
-          assert(ct.isCancelled)
-          println("~~~~done")
-        }
-      }
-      val f = Future.delay(5 seconds)
+      
       f onSuccess {
         case _ => working.unsubscribe()
       }
       
-      try{
-          Await.ready(f, 3 seconds)
-          assert(false)
-      } catch {
-          case e: Exception => // ok!
-      }
+      Await.ready(f, 6 seconds)
   }
 
   // ----------------------- //
