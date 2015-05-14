@@ -50,9 +50,11 @@ trait NodeScala {
    *  @return               a subscription that can stop the server and all its asynchronous operations *entirely*
    */
   def start(relativePath: String)(handler: Request => Response): Subscription = {
-      
-      val server = new Default(8191)
-      val listener = server.createListener(relativePath)
+      // TODO: Is this right? What about Main already doing this????
+      //val server = new Default(8191)
+      //val listener = server.createListener(relativePath)
+      // So, no. That was not needed...just this:
+      val listener = createListener(relativePath)
       val listenerSubscription = listener.start()
       
       /* create a cancellable asynchronous computation using the Future.run
