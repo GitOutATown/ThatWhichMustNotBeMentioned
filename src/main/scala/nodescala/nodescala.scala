@@ -11,6 +11,8 @@ import java.util.concurrent.{Executor, ThreadPoolExecutor, TimeUnit, LinkedBlock
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
 import java.net.InetSocketAddress
 
+import scala.util.{Try, Success, Failure} // Do I need this?
+
 /** Contains utilities common to the NodeScala© framework.
  */
 trait NodeScala {
@@ -29,7 +31,13 @@ trait NodeScala {
    *  @param token        the cancellation token
    *  @param body         the response to write back
    */
-  private def respond(exchange: Exchange, token: CancellationToken, response: Response): Unit = ???
+  private def respond(exchange: Exchange, token: CancellationToken, response: Response): Unit = {
+      while(token.nonCancelled && response.hasNext) {
+          val s = response.next()
+          exchange.write(s)
+      }
+      exchange.close()
+  }
 
   /** A server:
    *  1) creates and starts an http listener
@@ -41,9 +49,41 @@ trait NodeScala {
    *  @param handler        a function mapping a request to a response
    *  @return               a subscription that can stop the server and all its asynchronous operations *entirely*
    */
-  def start(relativePath: String)(handler: Request => Response): Subscription = ???
-
-}
+  def start(relativePath: String)(handler: Request => Response): Subscription = {
+      
+      val server = new Default(8191)
+      val listener = server.createListener(relativePath)
+      val listenerSubscription = listener.start()
+      
+      /* create a cancellable asynchronous computation using the Future.run
+       * companion method, which, while the token is not cancelled, awaits 
+       * the next request from the listener and then responds to it asynchronously
+       *
+       * working is a Subscription, ct is the cancellationToken.
+       * ct is instantiated in run and referenced by calling this anonymous function on it!
+       * Which also causes the Future to be invoked (i.e. run).
+       */
+      val working = Future.run() { ct =>
+        //println("~~~~ ct: " + ct)
+        Future {
+          while (ct.nonCancelled) {
+            /* as long as the token is not cancelled and there is a request from the http listener
+             * awaits the next request from the listener and then responds to it asynchronously
+             * processing that request using the `respond` method */
+            val reqExch = listener.nextRequest() // Future[(Request, Exchange)]
+            // Should this be onComplete with a match for Success/Failure or just onSuccess?
+            // ...and there is a request from the http listener
+            reqExch.onSuccess{
+                case ((req, exch)) => respond(exch, ct, handler(req))
+            }
+          }
+        }
+      } // end working = Future.run()
+      
+      Subscription(listenerSubscription, working)
+      
+  } // end def start
+} // end trait NodeScala
 
 
 object NodeScala {
@@ -71,8 +111,7 @@ object NodeScala {
     def close(): Unit
 
     def request: Request
-
-  }
+  } // end object NodeScala
 
   object Exchange {
     def apply(exchange: HttpExchange) = new Exchange {
@@ -111,9 +150,9 @@ object NodeScala {
      *  @return                the promise holding the pair of a request and an exchange object
      */
     def nextRequest(): Future[(Request, Exchange)] = {
-      val p = Promise[(Request, Exchange)]()
+      val p = Promise[(Request, Exchange)]() // These are type params, not actual data/object references!
 
-      createContext(xchg => {
+      createContext(xchg => { // xchg is the handler
         val req = xchg.request
         removeContext()
         p.success((req, xchg))
@@ -145,7 +184,7 @@ object NodeScala {
 
       def removeContext() = s.removeContext(relativePath)
     }
-  }
+  } // end Listener
 
   /** The standard server implementation.
    */

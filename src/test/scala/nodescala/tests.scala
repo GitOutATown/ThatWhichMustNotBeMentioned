@@ -188,7 +188,7 @@ class NodeScalaSuite extends FunSuite {
       Future {  
         blocking {  
           Future.delay(3 second) onSuccess {  
-            case _ => p.complete(Try(()))  
+            case x => p.complete(Try(()))  
           }  
         }  
       }  
@@ -265,7 +265,8 @@ class NodeScalaSuite extends FunSuite {
   test("A Future should be cancellable. test 1") {
       /*
        * working is a Subscription, ct is the cancellationToken.
-       * It is a mystery as to how ct is instantiated!
+       * ct is instantiated in run by calling this function on it!
+       * That causes the Future to be invoked (i.e. run).
        */
       val working = Future.run() { ct =>
         println("~~~~ ct: " + ct)

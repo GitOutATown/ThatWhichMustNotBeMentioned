@@ -95,7 +95,7 @@ package object nodescala {
         //println("~~~~ run TOP, f: " + f)
         val cts = CancellationTokenSource()
         val ct = cts.cancellationToken
-        f(ct)
+        f(ct) // This just causes the Future parameter to run, but ct as an arg is superfluous.
         cts
     }
   } // end FutureCompanionOps
