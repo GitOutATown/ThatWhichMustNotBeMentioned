@@ -287,6 +287,27 @@ class NodeScalaSuite extends FunSuite {
       
       Await.ready(f, 6 seconds)
   }
+  
+  // 1 second timeout
+  test("Server should handle a large even infinite response in 1 second") {
+      val dummy = new DummyServer(8191)
+      val dummySubscription = dummy.start("/testDir") {
+        request => Iterator.continually("Test")
+      }
+    
+      // wait until server is really installed
+      Thread.sleep(500)
+    
+      def test(req: Request) {
+        val webpage = dummy.emit("/testDir", req)
+        val content = Await.result(webpage.loaded.future, 1 second)
+        assert(true)
+      }
+    
+      test(immutable.Map("StrangeRequest" -> List("Does it work?")))
+    
+      dummySubscription.unsubscribe()
+  }
 
   // ----------------------- //
   

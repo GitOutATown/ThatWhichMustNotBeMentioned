@@ -11,7 +11,7 @@ import java.util.concurrent.{Executor, ThreadPoolExecutor, TimeUnit, LinkedBlock
 import com.sun.net.httpserver.{HttpExchange, HttpHandler, HttpServer}
 import java.net.InetSocketAddress
 
-import scala.util.{Try, Success, Failure} // Do I need this?
+//import scala.util.{Try, Success, Failure} // Do I need this?
 
 /** Contains utilities common to the NodeScala© framework.
  */
@@ -68,17 +68,20 @@ trait NodeScala {
       val working = Future.run() { ct =>
         //println("~~~~ ct: " + ct)
         Future {
-          while (ct.nonCancelled) {
-            /* as long as the token is not cancelled and there is a request from the http listener
-             * awaits the next request from the listener and then responds to it asynchronously
-             * processing that request using the `respond` method */
-            val reqExch = listener.nextRequest() // Future[(Request, Exchange)]
-            // Should this be onComplete with a match for Success/Failure or just onSuccess?
-            // ...and there is a request from the http listener
-            reqExch.onSuccess{
-                case ((req, exch)) => respond(exch, ct, handler(req))
-            }
-          }
+          // TODO: This may be a blocking candidate. NOPE, didn't fix it!!!
+          // What is needed instead might be asynch await, and some kind of timeout code
+            async {
+              while (ct.nonCancelled) {
+                /* as long as the token is not cancelled and there is a request from the http listener
+                 * awaits the next request from the listener and then responds to it asynchronously
+                 * processing that request using the `respond` method */
+                //val reqExch = listener.nextRequest() // Future[(Request, Exchange)]
+                val reqExch = Await.ready(listener.nextRequest(), 990 millis)
+                val (req, exch) = reqExch.now//{
+                respond(exch, ct, handler(req))
+                //}
+              } // end while
+           } // end async
         }
       } // end working = Future.run()
       

@@ -74,7 +74,10 @@ package object nodescala {
      */ 
     def delay(t: Duration): Future[Unit] = {
       // https://github.com/GitOutATown/async
-      val futUnit = async { Thread.sleep(t.toMillis) }
+      // TODO: Need blocking here? I don't think so...
+      val futUnit = async { 
+          Thread.sleep(t.toMillis)
+      }
       futUnit
     }
 
@@ -86,17 +89,31 @@ package object nodescala {
       }
     }
 
-    /** Creates a cancellable context for an execution and runs it.
+    /** Creates a cancellable context (i.e. CancellationTokenSource) 
+     *  for an execution and runs it (i.e. calls run on it).
      *  
-     *  f defines a function. The function takes a single argument,
-     *  which is a CancelationToken.
+     *  The curried (i.e. 2nd) parameter to run is a function, f, which 
+     *  in the body of the run function is called on (is passed) the
+     *  CancellationToken that has been created there. At that point 
+     *  f's body execution results in a Future whose computation periodically
+     *  (or continually) checks whether the ComputationToken has been
+     *  cancelled, in which case it exits its computation and completes.
+     *  
+     *  Meanwhile, the Subsription is returned to the client which
+     *  can then call unsubscribe on it. See extensive comments in
+     *  object CancellationTokenSource below.
+     *  
+     *  Note that the order of parameter processing must be right-to-left.
+     *  In other words this Future being constructed via FutureCompanionOps(val f: Future.type)
+     *  calls run() after the second set of apply() parameters have created
+     *  the the so called cancellation context.  
      */
     def run()(f: CancellationToken => Future[Unit]): Subscription = {
         //println("~~~~ run TOP, f: " + f)
         val cts = CancellationTokenSource()
         val ct = cts.cancellationToken
-        f(ct) // This just causes the Future parameter to run, but ct as an arg is superfluous.
-        cts
+        f(ct) 
+        cts // returning Subscription (with it def unsubscribe)
     }
   } // end FutureCompanionOps
 
@@ -114,7 +131,8 @@ package object nodescala {
      */
     def now: T = {
       // hint - use Await.result to implement this. What should be the time out ?
-      if(f.isCompleted) Await.result(f, 0 nanos)
+      // TODO: This may be where the timeout is occuring. What should the time out be? -1?
+      if(f.isCompleted) Await.result(f, 0 millis)
       else throw new NoSuchElementException
     }
 
@@ -140,7 +158,7 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    // The different from continueWith is that this is using Try.
+    // The difference from continueWith is that this is using Try.
     def continue[S](cont: Try[T] => S): Future[S] = {
       val p = Promise[S]() 
       
@@ -197,6 +215,7 @@ package object nodescala {
    */
   object CancellationTokenSource {
     /**  Creates a new `CancellationTokenSource`.
+      ** RW:
        * This apply block is a constructor for CancellationTokenSource which extends Subcription
        * which provides the unsubscribe method.
        * 
